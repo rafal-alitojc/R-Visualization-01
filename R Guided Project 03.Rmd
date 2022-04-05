@@ -1,0 +1,116 @@
+---
+title: "R Guided Project 03: Analyzing Forest Fire Data"
+output: html_document
+date: '2022-03-23'
+---
+
+# Exploring Data Through Visualizations: Independent Investigations
+
+Load the packages and data needed for the project.
+
+```{r}
+library(tidyverse)
+forest_fires <- read_csv("forestfires.csv")
+```
+
+
+# The Importance of Forest Fire Data
+
+```{r}
+# display column names of the dataset
+colnames(forest_fires)
+```
+
+We know that the columns correspond to the following information:
+
+* **X**: X-axis spatial coordinate within the Montesinho park map: 1 to 9 
+* **Y**: Y-axis spatial coordinate within the Montesinho park map: 2 to 9 
+* **month**: Month of the year: 'jan' to 'dec' 
+* **day**: Day of the week: 'mon' to 'sun' 
+* **FFMC**: Fine Fuel Moisture Code index from the FWI system: 18.7 to 96.20 
+* **DMC**: Duff Moisture Code index from the FWI system: 1.1 to 291.3 
+* **DC**: Drought Code index from the FWI system: 7.9 to 860.6 
+* **ISI**: Initial Spread Index from the FWI system: 0.0 to 56.10 
+* **temp**: Temperature in Celsius degrees: 2.2 to 33.30 
+* **RH**: Relative humidity in percentage: 15.0 to 100 
+* **wind**: Wind speed in km/h: 0.40 to 9.40 
+* **rain**: Outside rain in mm/m2 : 0.0 to 6.4 
+* **area**: The burned area of the forest (in ha): 0.00 to 1090.84 
+
+A single row corresponds to the location of a fire and some characteristics about the fire itself. Higher water presence is typically associated with less fire spread, so we might expect the water-related variables (`DMC` and `rain`) to be related with `area`.
+
+
+# Data Processing
+
+`month` and `day` are character variables, but we know that there is an inherent order to them. We'll convert these variables into factors so that they'll be sorted into the correct order when we plot them.
+
+```{r}
+forest_fires %>% pull(month) %>% unique
+```
+
+```{r}
+forest_fires %>% pull(day) %>% unique
+```
+
+Days of week can start with Monday or Sunday in various countries.  
+In this analysis, let's assume that the first day of the week will be Monday.
+
+```{r}
+month_order <- c("jan", "feb", "mar",
+                 "apr", "may", "jun",
+                 "jul", "aug", "sep",
+                 "oct", "nov", "dec")
+dow_order <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+forest_fires <- forest_fires %>% 
+  mutate(
+    month = factor(month, levels = month_order),
+    day = factor(day, levels = dow_order)
+  )
+
+# print the first rows of the modified dataset
+forest_fires
+```
+
+Now, `month` and `day` columns have data types abbreviated as 'fct' which means that they are R factors.
+
+
+# When Do Most Forest Fires Occur?
+
+We need to create a summary tibble that counts the number of fires that appears in each month. Then, we'll be able to use this tibble in a visualization.
+
+## Month Level
+
+```{r}
+fires_by_month <- forest_fires %>%
+  group_by(month) %>%
+  summarize(total_fires = n())
+
+fires_by_month %>% 
+  ggplot(aes(x = month, y = total_fires)) +
+  geom_col() +
+  labs(
+    title = "Number of forest fires in data by month",
+    y = "Fire count",
+    x = "Month"
+  )
+```
+
+## Day of Week Level
+
+```{r}
+fires_by_dow <- forest_fires %>%
+  group_by(day) %>%
+  summarize(total_fires = n())
+
+fires_by_dow %>% 
+  ggplot(aes(x = day, y = total_fires)) +
+  geom_col() +
+  labs(
+    title = "Number of forest fires in data by day of the week",
+    y = "Fire count",
+    x = "Day of the week"
+  )
+```
+
+We see a massive spike in fires in August and September, as well as a smaller spike in March. Fires seem to be more frequent on the weekend.
